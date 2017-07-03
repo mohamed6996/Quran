@@ -1,6 +1,7 @@
 package com.listenquran.quran;
 
 import android.content.ContentValues;
+import android.content.Intent;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.support.v7.app.AppCompatActivity;
@@ -27,6 +28,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringTokenizer;
 
 public class MainActivity extends AppCompatActivity implements ListItemClickListener {
 
@@ -45,9 +47,9 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         com.facebook.stetho.Stetho.initializeWithDefaults(getApplicationContext());
 
         mDataSet = new ArrayList<>();
-     //   contentValues = new ContentValues();
-     //   ReciterDbHelper dbHelper = new ReciterDbHelper(this);
-     //   mDb = dbHelper.getWritableDatabase();
+        //   contentValues = new ContentValues();
+        //   ReciterDbHelper dbHelper = new ReciterDbHelper(this);
+        //   mDb = dbHelper.getWritableDatabase();
 
 
         initDataSet();
@@ -56,12 +58,11 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-    //    Cursor cursor = getAllGuests();
+        //    Cursor cursor = getAllGuests();
 
         mAdapter = new ReciterAdapter(mDataSet, this, this);
-     //   mAdapter.swapCursor(cursor);
+        //   mAdapter.swapCursor(cursor);
         mRecyclerView.setAdapter(mAdapter);
-
 
 
         textView = (TextView) findViewById(R.id.textview);
@@ -87,11 +88,14 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
 
                     JSONObject jsonObject = new JSONObject(response);
                     JSONArray jsonArray = jsonObject.getJSONArray("reciters");
-                    for (int i = 0; i < 5; i++) {
+                    for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject jsonObject1 = jsonArray.getJSONObject(i);
                         String name = jsonObject1.getString("name");
                         String server = jsonObject1.getString("Server");
                         String id = jsonObject1.getString("id");
+                        String sura = jsonObject1.getString("suras");
+
+
 
                     /*    contentValues.put(ReciterContract.ReciterEntry.COLUMN_RECITER_NAME,name);
                         contentValues.put(ReciterContract.ReciterEntry.COLUMN_RECITER_ID,id);
@@ -99,12 +103,9 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
                         mDb.insert(ReciterContract.ReciterEntry.TABLE_NAME,null,contentValues);*/
 
 
-                        ReciterModel reciterModel = new ReciterModel(name, server, id);
+                        ReciterModel reciterModel = new ReciterModel(name, server, id, sura);
                         mDataSet.add(reciterModel);
                         mAdapter.notifyDataSetChanged();
-
-
-                            textView.append(name + "\n" + id + server + "\n");
 
                     }
 
@@ -140,7 +141,10 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
 
     @Override
     public void onListItemClick(int clickedItemIndex) {
-       ReciterModel reciterModel= mDataSet.get(clickedItemIndex);
-        Toast.makeText(this,reciterModel.getId(),Toast.LENGTH_LONG).show();
+
+        Intent intent = new Intent(MainActivity.this, Sura.class);
+        String sura_number = mDataSet.get(clickedItemIndex).getSura();
+        intent.putExtra("sura_number", sura_number);
+        startActivity(intent);
     }
 }
