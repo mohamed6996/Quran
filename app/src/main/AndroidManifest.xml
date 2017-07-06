@@ -20,6 +20,11 @@
         </activity>
         <activity android:name=".Sura" />
         <activity android:name=".Tset"></activity>
+        
+        <provider
+            android:authorities="com.listenquran.quran"
+            android:name=".data.ReciterProvider"
+            android:exported="false"/>
     </application>
 
 </manifest>

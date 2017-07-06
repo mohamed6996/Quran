@@ -3,7 +3,10 @@ package com.listenquran.quran;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.app.LoaderManager;
+import android.content.CursorLoader;
+import android.content.Loader;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
@@ -16,8 +19,6 @@ import android.widget.Toast;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.JsonArrayRequest;
-import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.StringRequest;
 import com.listenquran.quran.data.ReciterContract;
 import com.listenquran.quran.data.ReciterDbHelper;
@@ -28,9 +29,8 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.StringTokenizer;
 
-public class MainActivity extends AppCompatActivity implements ListItemClickListener {
+public class MainActivity extends AppCompatActivity implements ListItemClickListener, LoaderManager.LoaderCallbacks<Cursor> {
 
     TextView textView;
     Button button;
@@ -41,8 +41,10 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
      * Database helper that will provide us access to the database
      */
     private ReciterDbHelper mDbHelper;
-    //  private SQLiteDatabase db;
-    //  ContentValues contentValues;
+    /**
+     * Identifier for the reciter data loader
+     */
+    private static final int RECITER_LOADER = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,9 +53,7 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         com.facebook.stetho.Stetho.initializeWithDefaults(getApplicationContext());
 
         mDataSet = new ArrayList<>();
-        //   contentValues = new ContentValues();
         mDbHelper = new ReciterDbHelper(this);
-        //    db = mDbHelper.getWritableDatabase();
 
 
         initDataSet();
@@ -61,17 +61,10 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerview);
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-
-        //    Cursor cursor = getAllGuests();
-
         mAdapter = new ReciterAdapter(mDataSet, this, this);
-        //   mAdapter.swapCursor(cursor);
         mRecyclerView.setAdapter(mAdapter);
 
-
         textView = (TextView) findViewById(R.id.textview);
-        insertFakeDate();
-        displayDatabaseInfo();
         button = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -82,7 +75,8 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
             }
         });
 
-
+        // Kick off the loader
+        getLoaderManager().initLoader(RECITER_LOADER, null, this);
     }
 
     private void initDataSet() {
@@ -90,8 +84,9 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
                 , new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
-                try {
+                insertDate(response);
 
+                try {
                     JSONObject jsonObject = new JSONObject(response);
                     JSONArray jsonArray = jsonObject.getJSONArray("reciters");
                     for (int i = 0; i < jsonArray.length(); i++) {
@@ -100,14 +95,6 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
                         String server = jsonObject1.getString("Server");
                         String id = jsonObject1.getString("id");
                         String sura = jsonObject1.getString("suras");
-
-
-
-                    /*    contentValues.put(ReciterContract.ReciterEntry.COLUMN_RECITER_NAME,name);
-                        contentValues.put(ReciterContract.ReciterEntry.COLUMN_RECITER_ID,id);
-                        contentValues.put(ReciterContract.ReciterEntry.COLUMN_RECITER_SERVER,server);
-                        mDb.insert(ReciterContract.ReciterEntry.TABLE_NAME,null,contentValues);*/
-
 
                         ReciterModel reciterModel = new ReciterModel(name, server, id, sura);
                         mDataSet.add(reciterModel);
@@ -133,17 +120,6 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         Singleton.getInstance(MainActivity.this).addToReq(stringRequest);
     }
 
-   /* private Cursor getAllGuests() {
-        return db.query(
-                ReciterContract.ReciterEntry.TABLE_NAME,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-        );
-    }*/
 
     @Override
     public void onListItemClick(int clickedItemIndex) {
@@ -157,45 +133,71 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         startActivity(intent);
     }
 
-    private void displayDatabaseInfo() {
 
-        SQLiteDatabase db = mDbHelper.getReadableDatabase();
+    private void insertDate(String name) {
 
-        // Perform a query on the pets table
-        Cursor cursor = db.query(
-                ReciterContract.ReciterEntry.TABLE_NAME,   // The table to query
-                null,                  // projection,The columns to return
-                null,                  // The columns for the WHERE clause
-                null,                  // The values for the WHERE clause
-                null,                  // Don't group the rows
-                null,                  // Don't filter by row groups
-                null);                 // The sort order
-
-        textView.setText("" + cursor.getCount());
-    }
-
-    private void insertFakeDate() {
-
-        SQLiteDatabase db = mDbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
-        values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_NAME, "Mohamed");
-        values.put(ReciterContract.ReciterEntry.COLUMN_SERVER, "Mohamed");
-        values.put(ReciterContract.ReciterEntry.COLUMN_SURAS, "Mohamed");
+
+        values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_NAME, name);
+        values.put(ReciterContract.ReciterEntry.COLUMN_SERVER, "mohamed");
+        values.put(ReciterContract.ReciterEntry.COLUMN_SURAS, "ahmed");
         values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_LETTER, "M");
         //   values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_SERVER, ".com");
 
-
-        long newRowId = db.insert(ReciterContract.ReciterEntry.TABLE_NAME, null, values);
-        // Show a toast message depending on whether or not the insertion was successful
-        if (newRowId == -1) {
-            // If the row ID is -1, then there was an error with insertion.
-            Toast.makeText(this, "Error with saving pet", Toast.LENGTH_SHORT).show();
-        } else {
-            // Otherwise, the insertion was successful and we can display a toast with the row ID.
-            Toast.makeText(this, "Pet saved with row id: " + newRowId, Toast.LENGTH_SHORT).show();
-        }
+        Uri uri = getContentResolver().insert(ReciterContract.ReciterEntry.CONTENT_URI, values);
 
 
     }
 
+    @Override
+    public Loader onCreateLoader(int id, Bundle args) {
+        // This loader will execute the ContentProvider's query method on a background thread
+        return new CursorLoader(this,   // Parent activity context
+                ReciterContract.ReciterEntry.CONTENT_URI,   // Provider content URI to query
+                null,             // Columns to include in the resulting Cursor
+                null,                   // No selection clause
+                null,                   // No selection arguments
+                null);                  // Default sort order
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+        textView.setText("" + cursor.getCount());
+
+        try {
+            while (cursor.moveToNext()) {
+                String response = cursor.getString(cursor.getColumnIndex(ReciterContract.ReciterEntry.COLUMN_RECITER_NAME));
+
+                try {
+                    JSONObject jsonObject = new JSONObject(response);
+                    JSONArray jsonArray = jsonObject.getJSONArray("reciters");
+                    for (int i = 0; i < jsonArray.length(); i++) {
+                        JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                        String name = jsonObject1.getString("name");
+                        String server = jsonObject1.getString("Server");
+                        String id = jsonObject1.getString("id");
+                        String sura = jsonObject1.getString("suras");
+
+                        ReciterModel reciterModel = new ReciterModel(name, server, id, sura);
+                        mDataSet.add(reciterModel);
+                        mAdapter.notifyDataSetChanged();
+
+                    }
+
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "failed", Toast.LENGTH_LONG).show();
+
+                }
+            }
+        } finally {
+            cursor.close();
+        }
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader loader) {
+
+    }
 }
