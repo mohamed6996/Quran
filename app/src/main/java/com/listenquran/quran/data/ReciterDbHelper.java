@@ -22,10 +22,11 @@ public class ReciterDbHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
         final String SQL_CREATE_TABLE = "CREATE TABLE " + ReciterEntry.TABLE_NAME + " (" +
                 ReciterEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-                ReciterEntry.COLUMN_RECITER_NAME + " TEXT NOT NULL, " +
-                ReciterEntry.COLUMN_RECITER_ID + " INTEGER NOT NULL, " +
-                ReciterEntry.COLUMN_RECITER_SERVER + "TEXT NOT NULL" +
-                "); ";
+                ReciterEntry.COLUMN_RECITER_NAME + " TEXT, " +
+                ReciterEntry.COLUMN_SERVER + " TEXT, " +
+                ReciterEntry.COLUMN_SURAS + " TEXT, " +
+                ReciterEntry.COLUMN_RECITER_LETTER + " TEXT ); " ;
+             //   ReciterEntry.COLUMN_RECITER_SERVER + " INTEGER ); ";
 
         sqLiteDatabase.execSQL(SQL_CREATE_TABLE);
     }

@@ -37,8 +37,12 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
     private List<ReciterModel> mDataSet;
     private RecyclerView mRecyclerView;
     private ReciterAdapter mAdapter;
-    private SQLiteDatabase mDb;
-    ContentValues contentValues;
+    /**
+     * Database helper that will provide us access to the database
+     */
+    private ReciterDbHelper mDbHelper;
+    //  private SQLiteDatabase db;
+    //  ContentValues contentValues;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,8 +52,8 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
 
         mDataSet = new ArrayList<>();
         //   contentValues = new ContentValues();
-        //   ReciterDbHelper dbHelper = new ReciterDbHelper(this);
-        //   mDb = dbHelper.getWritableDatabase();
+        mDbHelper = new ReciterDbHelper(this);
+        //    db = mDbHelper.getWritableDatabase();
 
 
         initDataSet();
@@ -66,6 +70,8 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
 
 
         textView = (TextView) findViewById(R.id.textview);
+        insertFakeDate();
+        displayDatabaseInfo();
         button = (Button) findViewById(R.id.button);
         button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -127,8 +133,8 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         Singleton.getInstance(MainActivity.this).addToReq(stringRequest);
     }
 
-    private Cursor getAllGuests() {
-        return mDb.query(
+   /* private Cursor getAllGuests() {
+        return db.query(
                 ReciterContract.ReciterEntry.TABLE_NAME,
                 null,
                 null,
@@ -137,14 +143,59 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
                 null,
                 null
         );
-    }
+    }*/
 
     @Override
     public void onListItemClick(int clickedItemIndex) {
 
         Intent intent = new Intent(MainActivity.this, Sura.class);
         String sura_number = mDataSet.get(clickedItemIndex).getSura();
+        String reciter_server = mDataSet.get(clickedItemIndex).getServer();
         intent.putExtra("sura_number", sura_number);
+        intent.putExtra("reciter_server", reciter_server);
+        Toast.makeText(MainActivity.this, reciter_server, Toast.LENGTH_LONG).show();
         startActivity(intent);
     }
+
+    private void displayDatabaseInfo() {
+
+        SQLiteDatabase db = mDbHelper.getReadableDatabase();
+
+        // Perform a query on the pets table
+        Cursor cursor = db.query(
+                ReciterContract.ReciterEntry.TABLE_NAME,   // The table to query
+                null,                  // projection,The columns to return
+                null,                  // The columns for the WHERE clause
+                null,                  // The values for the WHERE clause
+                null,                  // Don't group the rows
+                null,                  // Don't filter by row groups
+                null);                 // The sort order
+
+        textView.setText("" + cursor.getCount());
+    }
+
+    private void insertFakeDate() {
+
+        SQLiteDatabase db = mDbHelper.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_NAME, "Mohamed");
+        values.put(ReciterContract.ReciterEntry.COLUMN_SERVER, "Mohamed");
+        values.put(ReciterContract.ReciterEntry.COLUMN_SURAS, "Mohamed");
+        values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_LETTER, "M");
+        //   values.put(ReciterContract.ReciterEntry.COLUMN_RECITER_SERVER, ".com");
+
+
+        long newRowId = db.insert(ReciterContract.ReciterEntry.TABLE_NAME, null, values);
+        // Show a toast message depending on whether or not the insertion was successful
+        if (newRowId == -1) {
+            // If the row ID is -1, then there was an error with insertion.
+            Toast.makeText(this, "Error with saving pet", Toast.LENGTH_SHORT).show();
+        } else {
+            // Otherwise, the insertion was successful and we can display a toast with the row ID.
+            Toast.makeText(this, "Pet saved with row id: " + newRowId, Toast.LENGTH_SHORT).show();
+        }
+
+
+    }
+
 }

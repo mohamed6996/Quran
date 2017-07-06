@@ -1,5 +1,6 @@
 package com.listenquran.quran;
 
+import android.content.Context;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,9 +13,14 @@ import java.util.List;
 public class SuraAdapter extends RecyclerView.Adapter<SuraAdapter.SuraViewHolder> {
 
     List<SuraModel> mDataSet;
+    Context mContext;
+    final private ListItemClickListener mOnClickListener;
 
-    public SuraAdapter(List mDataSet) {
+
+    public SuraAdapter(List mDataSet, Context context,ListItemClickListener listener) {
         this.mDataSet = mDataSet;
+        this.mContext = context;
+        this.mOnClickListener = listener;
     }
 
     @Override
@@ -25,7 +31,7 @@ public class SuraAdapter extends RecyclerView.Adapter<SuraAdapter.SuraViewHolder
 
     @Override
     public void onBindViewHolder(SuraViewHolder holder, int position) {
-        SuraModel suraModel =  mDataSet.get(position);
+        SuraModel suraModel = mDataSet.get(position);
         holder.suraTextView.setText(suraModel.getSura_name());
     }
 
@@ -34,12 +40,20 @@ public class SuraAdapter extends RecyclerView.Adapter<SuraAdapter.SuraViewHolder
         return mDataSet.size();
     }
 
-    public class SuraViewHolder extends RecyclerView.ViewHolder {
+    public class SuraViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener{
         TextView suraTextView;
 
         public SuraViewHolder(View itemView) {
             super(itemView);
             suraTextView = (TextView) itemView.findViewById(R.id.sura_textView);
+            itemView.setOnClickListener(this);
+
+        }
+
+        @Override
+        public void onClick(View view) {
+            mOnClickListener.onListItemClick(getAdapterPosition());
+
         }
     }
 }
