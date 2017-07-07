@@ -19,12 +19,14 @@
             </intent-filter>
         </activity>
         <activity android:name=".Sura" />
-        <activity android:name=".Tset"></activity>
-        
+        <activity android:name=".Tset" />
+
         <provider
-            android:authorities="com.listenquran.quran"
             android:name=".data.ReciterProvider"
-            android:exported="false"/>
+            android:authorities="com.listenquran.quran"
+            android:exported="false" />
+
+        <activity android:name=".Favorite"></activity>
     </application>
 
 </manifest>

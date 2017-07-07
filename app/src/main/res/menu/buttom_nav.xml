@@ -1,0 +1,21 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/category_home"
+        android:enabled="true"
+        android:title="home"
+        android:icon="@drawable/ic_home"
+        app:showAsAction="ifRoom"/>
+    <item
+        android:id="@+id/category_favorite"
+        android:enabled="true"
+        android:title="favorite"
+        android:icon="@drawable/ic_favorite"
+        app:showAsAction="ifRoom"/>
+    <item
+        android:id="@+id/category_downloads"
+        android:enabled="true"
+        android:title="downloads"
+        android:icon="@drawable/ic_file_download"
+        app:showAsAction="ifRoom"/>
+</menu>

@@ -28,12 +28,21 @@ public class ReciterDbHelper extends SQLiteOpenHelper {
                 ReciterEntry.COLUMN_RECITER_LETTER + " TEXT ); " ;
              //   ReciterEntry.COLUMN_RECITER_SERVER + " INTEGER ); ";
 
-        sqLiteDatabase.execSQL(SQL_CREATE_TABLE);
+        final String CREATE_FAVORITE_TABLE = "CREATE TABLE " + ReciterContract.FavoriteEntry.TABLE_NAME + " (" +
+                ReciterContract.FavoriteEntry._ID + " INTEGER PRIMARY KEY  ," +
+                ReciterContract.FavoriteEntry.COLUMN_JSON_STRING + " TEXT ); " ;
+
+        sqLiteDatabase.execSQL(CREATE_FAVORITE_TABLE);
+      //  sqLiteDatabase.execSQL(SQL_CREATE_TABLE);
+
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + ReciterEntry.TABLE_NAME);
+        sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + ReciterContract.FavoriteEntry.TABLE_NAME);
+      //  sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + ReciterEntry.TABLE_NAME);
+
         onCreate(sqLiteDatabase);
+
     }
 }

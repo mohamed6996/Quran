@@ -4,18 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.listenquran.quran.Sura"
+    tools:context="com.listenquran.quran.Favorite"
     android:background="@drawable/background">
 
-
     <android.support.v7.widget.RecyclerView
-        android:id="@+id/sura_recycler_view"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:id="@+id/favorite_recyclerview"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
         android:layout_marginBottom="8dp"
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="24dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"

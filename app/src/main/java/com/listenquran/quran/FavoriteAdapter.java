@@ -5,7 +5,6 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.os.Bundle;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -19,54 +18,43 @@ import com.like.OnLikeListener;
 import com.listenquran.quran.data.ReciterContract;
 import com.listenquran.quran.data.ReciterDbHelper;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-/**
- * Created by lenovo on 6/29/2017.
- */
 
-public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterViewHolder> {
-    List<ReciterModel> mDataset;
-    HashMap<Integer, Integer> hashMap;
-    Context context;
+public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.FavoriteViewHolder> {
     Cursor mCursor;
+    Context mContext;
+    HashMap<Integer, Integer> hashMap = MainActivity.favoriteMap;
+    List<ReciterModel> mDataset = MainActivity.mDataSet;
     final private ListItemClickListener mOnClickListener;
 
-    public ReciterAdapter(List<ReciterModel> mDataset, Context context, ListItemClickListener listener) {
-        this.mDataset = mDataset;
-        this.context = context;
-        this.mOnClickListener = listener;
+
+    public FavoriteAdapter(Context context,ListItemClickListener listener) {
+        this.mContext = context;
+        this.mOnClickListener =listener;
     }
 
     @Override
-    public ReciterViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+    public FavoriteViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.reciter_list_item, parent, false);
-
-        return new ReciterViewHolder(view);
-
-
+        return new FavoriteViewHolder(view);
     }
 
     @Override
-    public void onBindViewHolder(ReciterViewHolder holder, int position) {
-
-        holder.reciterTextView.setText(mDataset.get(position).getName());
+    public void onBindViewHolder(FavoriteViewHolder holder, int position) {
 
         if (hashMap.containsValue(Integer.valueOf(mDataset.get(position).getId()))) {
             holder.likeButton.setLiked(true);
-        }
-        else {
+            holder.reciterTextView.setText(mDataset.get(position).getName());
+        } else {
             holder.likeButton.setLiked(false);
         }
-
-
     }
 
     @Override
     public int getItemCount() {
-        return mDataset.size();
+        return hashMap.size();
     }
 
     public Cursor swapCursor(Cursor c) {
@@ -85,16 +73,11 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
         return temp;
     }
 
-
-    public void getHash(HashMap<Integer, Integer> hashMap) {
-        this.hashMap = hashMap;
-    }
-
-    public class ReciterViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    public class FavoriteViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         TextView reciterTextView;
         LikeButton likeButton;
 
-        public ReciterViewHolder(View itemView) {
+        public FavoriteViewHolder(View itemView) {
             super(itemView);
             reciterTextView = (TextView) itemView.findViewById(R.id.rec_textView);
             likeButton = (LikeButton) itemView.findViewById(R.id.like_button);
@@ -103,7 +86,7 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
                 public void liked(LikeButton likeButton) {
                     //   Toast.makeText(context, "liked", Toast.LENGTH_SHORT).show();
                     int position = getAdapterPosition();
-                    Toast.makeText(context, "liked  " + position, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mContext, "liked  " + position, Toast.LENGTH_SHORT).show();
 
                     ReciterModel reciterModel = mDataset.get(position);
                     String id = reciterModel.getId();
@@ -112,7 +95,7 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
 
                     ContentValues values = new ContentValues();
                     values.put(ReciterContract.FavoriteEntry.COLUMN_JSON_STRING, id);
-                    Uri uri = context.getContentResolver().insert(ReciterContract.FavoriteEntry.CONTENT_URI, values);
+                    Uri uri = mContext.getContentResolver().insert(ReciterContract.FavoriteEntry.CONTENT_URI, values);
 
 
                 }
@@ -126,26 +109,25 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
                     String jsonString = gson.toJson(model, ReciterModel.class);
                     String selection = ReciterContract.FavoriteEntry.COLUMN_JSON_STRING + " = ?";
                     String[] selectionArgs = {id};
-                    ReciterDbHelper helper = new ReciterDbHelper(context);
+                    ReciterDbHelper helper = new ReciterDbHelper(mContext);
                     SQLiteDatabase db = helper.getWritableDatabase();
                     int deletedId = db.delete(ReciterContract.FavoriteEntry.TABLE_NAME, selection, selectionArgs);
                     hashMap.remove(Integer.valueOf(id));
 
-                    Toast.makeText(context, "removed  " + deletedId, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(mContext, "removed  " + deletedId, Toast.LENGTH_SHORT).show();
 
                 }
             });
             itemView.setOnClickListener(this);
+
         }
 
         @Override
         public void onClick(View view) {
             int position = getAdapterPosition();
             mOnClickListener.onListItemClick(position);
-
-
         }
-
-
     }
+
+
 }
