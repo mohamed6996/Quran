@@ -11,5 +11,11 @@ public class Constants {
 
    public static final String JSON_KEY = "json_key";
 
+   public static final String SP_KEY = "shared_preference";
+
+   public static final String RESPONSE_KEY = "response";
+
+
+
 
 }

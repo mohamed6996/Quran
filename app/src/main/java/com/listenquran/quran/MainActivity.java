@@ -2,6 +2,7 @@ package com.listenquran.quran;
 
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
@@ -27,6 +28,7 @@ import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
+import com.google.gson.Gson;
 import com.listenquran.quran.data.ReciterContract;
 import com.listenquran.quran.data.ReciterDbHelper;
 
@@ -49,6 +51,8 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
     RecyclerView.LayoutManager mLayoutManager;
     static HashMap<Integer, Integer> favoriteMap;
 
+    SharedPreferences sharedPreferences;
+
     /**
      * Database helper that will provide us access to the database
      */
@@ -65,6 +69,9 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         com.facebook.stetho.Stetho.initializeWithDefaults(getApplicationContext());
         favoriteMap = new HashMap<>();
 
+        sharedPreferences = getSharedPreferences(Constants.SP_KEY, MODE_PRIVATE);
+
+
         bottomNavigationView = (BottomNavigationView) findViewById(R.id.bottom_navigation);
         bottomNavigationView.setOnNavigationItemSelectedListener(
                 new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -76,7 +83,8 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
                         }
                         if (id == R.id.category_favorite) {
                             Toast.makeText(MainActivity.this, "favorite", Toast.LENGTH_SHORT).show();
-                            startActivity(new Intent(MainActivity.this, Favorite.class));
+                            Intent intent = new Intent(MainActivity.this, Favorite.class);
+                            startActivity(intent);
                         }
                         if (id == R.id.category_downloads) {
                             Toast.makeText(MainActivity.this, "downloads", Toast.LENGTH_SHORT).show();
@@ -89,8 +97,7 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         mDataSet = new ArrayList<>();
         mDbHelper = new ReciterDbHelper(this);
 
-
-        initDataSet();
+        initData();
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recyclerview);
         mRecyclerView.setHasFixedSize(true);
@@ -109,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
             @Override
             public void onClick(View view) {
 
-                initDataSet();
+                //  initData();
 
             }
         });
@@ -117,7 +124,65 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         // Kick off the loader
         getLoaderManager().initLoader(RECITER_LOADER, null, this);
 
+    }
 
+    public void initData() {
+        if (sharedPreferences.getString(Constants.RESPONSE_KEY, "").isEmpty()) {
+            retrieveFromNetwork();
+            Toast.makeText(MainActivity.this, "checked in from if ", Toast.LENGTH_LONG).show();
+        } else {
+            processJsonResponse();
+            //   retrieveFromNetwork();
+            Toast.makeText(MainActivity.this, "checked in from else  " + sharedPreferences.getString(Constants.RESPONSE_KEY, "").isEmpty(), Toast.LENGTH_LONG).show();
+
+        }
+    }
+
+    public void retrieveFromNetwork() {
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, Constants.URL
+                , new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                SharedPreferences.Editor editor = sharedPreferences.edit();
+                editor.putString(Constants.RESPONSE_KEY, response);
+                editor.apply();
+                processJsonResponse();
+                mAdapter.notifyDataSetChanged();
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+
+            }
+        });
+
+        Singleton.getInstance(MainActivity.this).addToReq(stringRequest);
+    }
+
+    public void processJsonResponse() {
+        String response = sharedPreferences.getString(Constants.RESPONSE_KEY, "");
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            JSONArray jsonArray = jsonObject.getJSONArray("reciters");
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                String name = jsonObject1.getString("name");
+                String server = jsonObject1.getString("Server");
+                String id = jsonObject1.getString("id");
+                String sura = jsonObject1.getString("suras");
+
+                ReciterModel reciterModel = new ReciterModel(name, server, id, sura);
+                mDataSet.add(reciterModel);
+                //mAdapter.notifyDataSetChanged();
+
+            }
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            Toast.makeText(MainActivity.this, "failed", Toast.LENGTH_LONG).show();
+
+        }
     }
 
     @Override
@@ -128,35 +193,19 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
     }
 
 
-    private void initDataSet() {
+  /*  private void initDataSet() {
         StringRequest stringRequest = new StringRequest(Request.Method.GET, Constants.URL
                 , new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 //   insertDate(response);
+                //  SharedPreferences.Editor editor = sharedPreferences.edit();
+                //  editor.putString(Constants.RESPONSE_KEY,response);
+                //  editor.apply();
+                String jsonResponce = sharedPreferences.getString(Constants.RESPONSE_KEY, "");
+                Toast.makeText(MainActivity.this, "" + jsonResponce, Toast.LENGTH_LONG).show();
 
-                try {
-                    JSONObject jsonObject = new JSONObject(response);
-                    JSONArray jsonArray = jsonObject.getJSONArray("reciters");
-                    for (int i = 0; i < jsonArray.length(); i++) {
-                        JSONObject jsonObject1 = jsonArray.getJSONObject(i);
-                        String name = jsonObject1.getString("name");
-                        String server = jsonObject1.getString("Server");
-                        String id = jsonObject1.getString("id");
-                        String sura = jsonObject1.getString("suras");
-
-                        ReciterModel reciterModel = new ReciterModel(name, server, id, sura);
-                        mDataSet.add(reciterModel);
-                        mAdapter.notifyDataSetChanged();
-
-                    }
-
-
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                    Toast.makeText(MainActivity.this, "failed", Toast.LENGTH_LONG).show();
-
-                }
+                init(jsonResponce);
 
             }
         }, new Response.ErrorListener() {
@@ -169,6 +218,31 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
         Singleton.getInstance(MainActivity.this).addToReq(stringRequest);
     }
 
+
+    public void init(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            JSONArray jsonArray = jsonObject.getJSONArray("reciters");
+            for (int i = 0; i < jsonArray.length(); i++) {
+                JSONObject jsonObject1 = jsonArray.getJSONObject(i);
+                String name = jsonObject1.getString("name");
+                String server = jsonObject1.getString("Server");
+                String id = jsonObject1.getString("id");
+                String sura = jsonObject1.getString("suras");
+
+                ReciterModel reciterModel = new ReciterModel(name, server, id, sura);
+                mDataSet.add(reciterModel);
+                mAdapter.notifyDataSetChanged();
+
+            }
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+            Toast.makeText(MainActivity.this, "failed", Toast.LENGTH_LONG).show();
+
+        }
+    }*/
 
     @Override
     public void onListItemClick(int clickedItemIndex) {
@@ -226,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements ListItemClickList
             }
 
         } else {
-            mAdapter.getHash(favoriteMap);
+            mAdapter.getHash(favoriteMap); // to avoid null pointer exception
             Toast.makeText(MainActivity.this, "fail" + cursor.getCount(), Toast.LENGTH_LONG).show();
         }
 

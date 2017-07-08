@@ -9,6 +9,10 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+
+import java.util.List;
+
 import static com.listenquran.quran.MainActivity.mDataSet;
 
 public class Favorite extends AppCompatActivity implements ListItemClickListener {
@@ -19,6 +23,7 @@ public class Favorite extends AppCompatActivity implements ListItemClickListener
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_favorite);
+
 
         mRecyclerView = (RecyclerView) findViewById(R.id.favorite_recyclerview);
         mRecyclerView.setHasFixedSize(true);

@@ -33,6 +33,7 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
     Context context;
     Cursor mCursor;
     final private ListItemClickListener mOnClickListener;
+    static List<ReciterModel> favoriteList = new ArrayList<>();
 
     public ReciterAdapter(List<ReciterModel> mDataset, Context context, ListItemClickListener listener) {
         this.mDataset = mDataset;
@@ -113,6 +114,8 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
                     ContentValues values = new ContentValues();
                     values.put(ReciterContract.FavoriteEntry.COLUMN_JSON_STRING, id);
                     Uri uri = context.getContentResolver().insert(ReciterContract.FavoriteEntry.CONTENT_URI, values);
+
+                    favoriteList.add(reciterModel);
 
 
                 }

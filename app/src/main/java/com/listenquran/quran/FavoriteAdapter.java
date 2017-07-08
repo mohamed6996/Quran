@@ -26,13 +26,13 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.Favori
     Cursor mCursor;
     Context mContext;
     HashMap<Integer, Integer> hashMap = MainActivity.favoriteMap;
-    List<ReciterModel> mDataset = MainActivity.mDataSet;
+    List<ReciterModel> mDataset = ReciterAdapter.favoriteList;
     final private ListItemClickListener mOnClickListener;
 
 
-    public FavoriteAdapter(Context context,ListItemClickListener listener) {
+    public FavoriteAdapter(Context context, ListItemClickListener listener) {
         this.mContext = context;
-        this.mOnClickListener =listener;
+        this.mOnClickListener = listener;
     }
 
     @Override
@@ -44,17 +44,23 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.Favori
     @Override
     public void onBindViewHolder(FavoriteViewHolder holder, int position) {
 
-        if (hashMap.containsValue(Integer.valueOf(mDataset.get(position).getId()))) {
-            holder.likeButton.setLiked(true);
-            holder.reciterTextView.setText(mDataset.get(position).getName());
-        } else {
-            holder.likeButton.setLiked(false);
-        }
+        holder.likeButton.setLiked(true);
+        holder.reciterTextView.setText(mDataset.get(position).getName());
     }
 
     @Override
     public int getItemCount() {
-        return hashMap.size();
+        return ReciterAdapter.favoriteList.size();
+    }
+
+    @Override
+    public int getItemViewType(int position) {
+        return position;
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
     }
 
     public Cursor swapCursor(Cursor c) {
@@ -113,6 +119,7 @@ public class FavoriteAdapter extends RecyclerView.Adapter<FavoriteAdapter.Favori
                     SQLiteDatabase db = helper.getWritableDatabase();
                     int deletedId = db.delete(ReciterContract.FavoriteEntry.TABLE_NAME, selection, selectionArgs);
                     hashMap.remove(Integer.valueOf(id));
+                    ReciterAdapter.favoriteList.remove(position);
 
                     Toast.makeText(mContext, "removed  " + deletedId, Toast.LENGTH_SHORT).show();
 
