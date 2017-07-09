@@ -134,6 +134,9 @@ public class ReciterAdapter extends RecyclerView.Adapter<ReciterAdapter.ReciterV
                     int deletedId = db.delete(ReciterContract.FavoriteEntry.TABLE_NAME, selection, selectionArgs);
                     hashMap.remove(Integer.valueOf(id));
 
+                    favoriteList.remove(position);
+
+
                     Toast.makeText(context, "removed  " + deletedId, Toast.LENGTH_SHORT).show();
 
                 }

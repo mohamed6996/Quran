@@ -3,6 +3,7 @@ package com.listenquran.quran;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Handler;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.MotionEvent;
@@ -13,10 +14,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Random;
 
-public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener, MediaPlayer.OnBufferingUpdateListener, View.OnTouchListener {
-    ImageView play, fast_forward, fast_rewind, skip_prev, skip_for;
-    TextView sura_name_textview;
+public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener, MediaPlayer.OnBufferingUpdateListener, MediaPlayer.OnErrorListener {
+    ImageView play, fast_forward, fast_rewind, skip_prev, skip_for, replay, shuffle;
+    TextView sura_name_textview, songCurrentDuration, songTotalDuration;
+    private boolean isRepeat = false;
+    private boolean isShuffle = false;
+
     SeekBar seekBar;
     MediaPlayer mediaPlayer;
     AudioManager audioManager;
@@ -36,7 +42,8 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
     String formatted_aya_number;   // 001
     String dataSource;
     String[] sura_name;
-
+    HashMap<Integer, Integer> shuffleMap;
+    int currentSuraNumber;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,17 +53,70 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
         aya_number = getIntent().getIntExtra("aya_number", 1);
         aya_index = Sura.mDataSet_sura_number.indexOf(aya_number);
         sura_name = this.getResources().getStringArray(R.array.sura_name);
-
+        songCurrentDuration = (TextView) findViewById(R.id.songCurrentDuration);
+        songTotalDuration = (TextView) findViewById(R.id.songTotalDuration);
         sura_name_textview = (TextView) findViewById(R.id.sura_name_textview);
-        sura_name_textview.setText(sura_name[aya_number-1]);
+        //   sura_name_textview.setText(sura_name[aya_number - 1]);
         play = (ImageView) findViewById(R.id.play);
         fast_forward = (ImageView) findViewById(R.id.fast_forward);
         fast_rewind = (ImageView) findViewById(R.id.fast_rewind);
         skip_prev = (ImageView) findViewById(R.id.skip_prev);
         skip_for = (ImageView) findViewById(R.id.skip_for);
+        replay = (ImageView) findViewById(R.id.replay);
+        replay.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (isRepeat) {
+                    isRepeat = false;
+                    replay.setColorFilter(ContextCompat.getColor(Tset.this, R.color.colorWhite));
+                    Toast.makeText(getApplicationContext(), "Repeat is off", Toast.LENGTH_SHORT).show();
+
+                } else {
+                    isRepeat = true;
+                    replay.setColorFilter(ContextCompat.getColor(Tset.this, R.color.colorAccent));
+                    Toast.makeText(getApplicationContext(), "Repeat is on", Toast.LENGTH_SHORT).show();
+
+                    isShuffle = false;
+                    shuffle.setColorFilter(ContextCompat.getColor(Tset.this, R.color.colorWhite));
+
+                }
+
+            }
+        });
+
+        shuffle = (ImageView) findViewById(R.id.shuffle);
+        shuffle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if (isShuffle) {
+                    isShuffle = false;
+                    Toast.makeText(getApplicationContext(), "Shuffle is off", Toast.LENGTH_SHORT).show();
+                    shuffle.setColorFilter(ContextCompat.getColor(Tset.this, R.color.colorWhite));
+
+                } else {
+                    // make repeat to true
+                    isShuffle = true;
+                    Toast.makeText(getApplicationContext(), "Shuffle is on", Toast.LENGTH_SHORT).show();
+                    shuffle.setColorFilter(ContextCompat.getColor(Tset.this, R.color.colorAccent));
+
+                    // make shuffle to false
+                    isRepeat = false;
+                    replay.setColorFilter(ContextCompat.getColor(Tset.this, R.color.colorWhite));
+
+                }
+            }
+        });
+
+
+        shuffleMap = new HashMap<>();
+        for (int i = 0; i < Sura.mDataSet_sura_number.size(); i++) {
+            shuffleMap.put(i, Sura.mDataSet_sura_number.get(i));
+        }
+
         mediaPlayer = new MediaPlayer();
+
         seekBar = (SeekBar) findViewById(R.id.seekbar);
-        seekBar.setOnTouchListener(this);
         seekBar.setMax(mediaPlayer.getDuration());
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
@@ -65,12 +125,21 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
 
             @Override
             public void onStartTrackingTouch(SeekBar seekBar) {
-
+                // remove message Handler from updating progress bar
+                handler.removeCallbacks(mUpdateTimeTask);
             }
 
             @Override
             public void onStopTrackingTouch(SeekBar seekBar) {
+                handler.removeCallbacks(mUpdateTimeTask);
+                int totalDuration = mediaPlayer.getDuration();
+                int currentPosition = progressToTimer(seekBar.getProgress(), totalDuration);
 
+                // forward or backward to certain seconds
+                mediaPlayer.seekTo(currentPosition);
+
+                // update timer progress again
+                updateProgressBar();
             }
         });
 
@@ -80,6 +149,7 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
         mediaPlayer.setOnBufferingUpdateListener(Tset.this);
         mediaPlayer.setOnPreparedListener(Tset.this);
         mediaPlayer.setOnCompletionListener(Tset.this);
+        mediaPlayer.setOnErrorListener(this);
 
         playSong(aya_number);
       /*  try {
@@ -109,7 +179,7 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
                     play.setImageResource(R.drawable.ic_play_circle);
                 }
 
-                primarySeekBarProgressUpdater();
+                //    primarySeekBarProgressUpdater();
                 // request audio focus
                 int result = audioManager.requestAudioFocus(onAudioFocusChangeListener,
                         AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN);
@@ -136,10 +206,6 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
         });
 */
 
-        /**
-         * Forward button click event
-         * Forwards song specified seconds
-         * */
         fast_forward.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -157,10 +223,7 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
             }
         });
 
-        /**
-         * Backward button click event
-         * Backward song to specified seconds
-         * */
+
         fast_rewind.setOnClickListener(new View.OnClickListener() {
 
             @Override
@@ -179,35 +242,34 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
             }
         });
 
-        /**
-         * Next button click event
-         * Plays next song by taking currentSongIndex + 1
-         * */
+
         skip_for.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
+                //  aya_index = aya_index + 1;
+                //  playSong(Sura.mDataSet_sura_number.get(aya_index));
+                //   sura_name_textview.setText(sura_name[aya_number]);
+
+               /* int index = Sura.mDataSet_sura_number.indexOf(currentSuraNumber);
+
+                playSong(Sura.mDataSet_sura_number.get(index) + 1);*/
                 aya_index = aya_index + 1;
                 playSong(Sura.mDataSet_sura_number.get(aya_index));
 
-                sura_name_textview.setText(sura_name[aya_number]);
+
             }
         });
 
-        /**
-         * Back button click event
-         * Plays previous song by currentSongIndex - 1
-         * */
+
         skip_prev.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
                 if (aya_index > 0) {
                     aya_index = aya_index - 1;
                     playSong(Sura.mDataSet_sura_number.get(aya_index));
-                    sura_name_textview.setText(sura_name[aya_number-2]);
 
-                }
-                else {
-                    Toast.makeText(Tset.this,"This is the first sura",Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(Tset.this, "This is the first sura", Toast.LENGTH_LONG).show();
                 }
 
             }
@@ -242,48 +304,37 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
     @Override
     public void onBufferingUpdate(MediaPlayer mediaPlayer, int i) {
         seekBar.setSecondaryProgress(i);
+
+
     }
 
     @Override
     public void onCompletion(MediaPlayer mediaPlayer) {
-        //  releaseMediaPlayer();
-        play.setImageResource(R.drawable.ic_play_circle);
+
+        if (isRepeat) {
+            mediaPlayer.start();
+        } else if (isShuffle) {
+            Random random = new Random();
+            int randa = random.nextInt(shuffleMap.size());
+            aya_index = randa;
+            playSong(shuffleMap.get(randa));
+        } else {
+            // no repeat or shuffle is ON , play next song
+            aya_index = aya_index + 1;
+            playSong(Sura.mDataSet_sura_number.get(aya_index));
+        }
+
+
     }
 
     @Override
     public void onPrepared(MediaPlayer mediaPlayer) {
         mediaPlayer.start();
-        primarySeekBarProgressUpdater();
-        play.setImageResource(R.drawable.ic_pause_circle);
+        // primarySeekBarProgressUpdater();
+        //  playSong(aya_number);
+        //  play.setImageResource(R.drawable.ic_pause_circle);
     }
 
-    /**
-     * Method which updates the SeekBar primary progress by current song playing position
-     */
-    private void primarySeekBarProgressUpdater() {
-        seekBar.setProgress((int) (((float) mediaPlayer.getCurrentPosition() / mediaPlayer.getDuration()) * 100)); // This math construction give a percentage of "was playing"/"song length"
-        if (mediaPlayer.isPlaying()) {
-            Runnable notification = new Runnable() {
-                public void run() {
-                    primarySeekBarProgressUpdater();
-                }
-            };
-            handler.postDelayed(notification, 1000);
-        }
-    }
-
-    @Override
-    public boolean onTouch(View v, MotionEvent event) {
-        if (v.getId() == R.id.seekbar) {
-            /** Seekbar onTouch event handler. Method which seeks MediaPlayer to seekBar primary progress position*/
-            if (mediaPlayer.isPlaying()) {
-                SeekBar sb = (SeekBar) v;
-                int playPositionInMillisecconds = (mediaPlayer.getDuration() / 100) * sb.getProgress();
-                mediaPlayer.seekTo(playPositionInMillisecconds);
-            }
-        }
-        return false;
-    }
 
     public void checkAudioFocus(int focusChange) {
         if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
@@ -318,7 +369,7 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
             // are finished
             // If you implement ducking and lower the volume, be
             // sure to return it to normal here, as well.
-                mediaPlayer.start();
+            mediaPlayer.start();
         }
     }
 
@@ -348,20 +399,17 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
             mediaPlayer.setDataSource(dataSource);
             play.setImageResource(R.drawable.ic_pause_circle);
             mediaPlayer.prepareAsync();
-            mediaPlayer.start();
-            // Displaying Song title
-            //  String songTitle = songsList.get(songIndex).get("songTitle");
-            //  songTitleLabel.setText(songTitle);
+            // start the media player on the onPrepared method callback
 
-            // Changing Button Image to pause image
-            //   btnPlay.setImageResource( R.drawable.btn_pause);
+            // Displaying Song title
+            sura_name_textview.setText(sura_name[aya_number - 1]);
 
             // set Progress bar values
             seekBar.setProgress(0);
             seekBar.setMax(100);
 
             // Updating progress bar
-            // updateProgressBar();
+            updateProgressBar();
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         } catch (IllegalStateException e) {
@@ -372,9 +420,95 @@ public class Tset extends AppCompatActivity implements MediaPlayer.OnCompletionL
     }
 
     private String constructDataSource(int index) {
-        formatted_aya_number = String.format("%03d", index);
+        formatted_aya_number = String.format("%03d", index);  // 001
         //  "http://server11.mp3quran.net/shatri/001.mp3"
         dataSource = reciter_server + "/" + formatted_aya_number + ".mp3";
         return dataSource;
+    }
+
+    public void updateProgressBar() {
+        handler.postDelayed(mUpdateTimeTask, 100);
+    }
+
+    /**
+     * Background Runnable thread
+     */
+    private Runnable mUpdateTimeTask = new Runnable() {
+        public void run() {
+            try {
+                long totalDuration = mediaPlayer.getDuration();
+                long currentDuration = mediaPlayer.getCurrentPosition();
+
+                // Displaying Total Duration time
+                songTotalDuration.setText("" + milliSecondsToTimer(totalDuration));
+                // Displaying time completed playing
+                songCurrentDuration.setText("" + milliSecondsToTimer(currentDuration));
+
+                // Updating progress bar
+                int progress = (int) (getProgressPercentage(currentDuration, totalDuration));
+                //Log.d("Progress", ""+progress);
+                seekBar.setProgress(progress);
+
+                // Running this thread after 100 milliseconds
+                handler.postDelayed(this, 100);
+                if (currentDuration >= (totalDuration / 8)) {
+                    // layoutads.setVisibility(View.VISIBLE);
+                }
+            } catch (Exception ex) {
+            }
+        }
+    };
+
+    public int getProgressPercentage(long currentDuration, long totalDuration) {
+        Double percentage = (double) 0;
+
+        long currentSeconds = (int) (currentDuration / 1000);
+        long totalSeconds = (int) (totalDuration / 1000);
+
+        // calculating percentage
+        percentage = (((double) currentSeconds) / totalSeconds) * 100;
+
+        // return percentage
+        return percentage.intValue();
+    }
+
+    public int progressToTimer(int progress, int totalDuration) {
+        int currentDuration = 0;
+        totalDuration = (int) (totalDuration / 1000);
+        currentDuration = (int) ((((double) progress) / 100) * totalDuration);
+
+        // return current duration in milliseconds
+        return currentDuration * 1000;
+    }
+
+    public String milliSecondsToTimer(long milliseconds) {
+        String finalTimerString = "";
+        String secondsString = "";
+
+        // Convert total duration into time
+        int hours = (int) (milliseconds / (1000 * 60 * 60));
+        int minutes = (int) (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
+        // Add hours if there
+        if (hours > 0) {
+            finalTimerString = hours + ":";
+        }
+
+        // Prepending 0 to seconds if it is one digit
+        if (seconds < 10) {
+            secondsString = "0" + seconds;
+        } else {
+            secondsString = "" + seconds;
+        }
+
+        finalTimerString = finalTimerString + minutes + ":" + secondsString;
+
+        // return timer string
+        return finalTimerString;
+    }
+
+    @Override
+    public boolean onError(MediaPlayer mediaPlayer, int i, int i1) {
+        return true;
     }
 }
